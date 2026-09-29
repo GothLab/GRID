@@ -129,6 +129,9 @@ button { font: inherit; }
   align-items: start;
   gap: 8px;
 }
+.gallery-section { grid-column: 1 / -1; margin: 0 0 24px; }
+.gallery-section-title { margin: 0 0 8px; padding-left: 2px; color: var(--muted); font-size: .78rem; font-weight: 600; letter-spacing: .02em; }
+.gallery-section-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 8px; }
 
 .card {
   --accent: 150, 160, 180;
@@ -360,7 +363,7 @@ button { font: inherit; }
 }
 @media (max-width: 430px) {
   .shell { width: calc(100% - 14px); padding-top: 8px; }
-  .gallery { grid-template-columns: 1fr; gap: 6px; }
+  .gallery-section-grid { grid-template-columns: 1fr; gap: 6px; }
   .card { grid-template-columns: 72px minmax(0, 1fr); height: 82px; gap: 8px; }
   .filter { padding-inline: 7px; }
   .detail-modal { padding: 13px; border-radius: 22px; }

@@ -10,8 +10,7 @@
   const data = window.GRID_CARDS || [];
   const records = new Map(data.map(card => [card.id, card]));
   const gallery = $('#gallery'), modal = $('#detail-modal');
-  const filters = [...document.querySelectorAll('.filters .filter')];
-  let language = 'en', category = 'all', mixer, mainSwiper, thumbsSwiper, currentId = '', activePage = 0, building = false;
+  let language = 'en', mainSwiper, thumbsSwiper, currentId = '', activePage = 0, building = false;
   try { if (localStorage.getItem('color-stories-language') === 'ru') language = 'ru'; } catch (_) { /* Optional storage. */ }
   const text = () => copy[language];
   const editorText = () => language === 'ru'
@@ -81,10 +80,14 @@
   const art = (card, index = 0) => `--gradient:linear-gradient(${120 + ((card.number * 13 + index * 29) % 100)}deg,${palettes[card.category].join(',')});--orb-x:${34 + ((card.number * 7 + index * 13) % 40)}%;--orb-y:${-20 + index * 6}%`;
   const orderedCards = [...data].sort((a, b) => a.number - b.number);
   const icon = card => `<img class="topic-icon" src="${card.icon}" alt="">`;
-  gallery.innerHTML = orderedCards.map(card => `<button class="card mix ${card.category}" type="button" id="${card.id}" data-id="${card.id}" aria-haspopup="dialog"><span class="art" aria-hidden="true" style="${art(card)}">${icon(card)}</span><span class="card-copy"><span class="card-title"></span><span class="subtitle"></span></span></button>`).join('');
+  const categoryOrder = ['green', 'orange', 'blue', 'pink', 'violet'];
+  gallery.innerHTML = categoryOrder.map(category => {
+    const cards = orderedCards.filter(card => card.category === category);
+    return `<section class="gallery-section ${category}" data-category="${category}"><h2 class="gallery-section-title" data-category-label="${category}"></h2><div class="gallery-section-grid">${cards.map(card => `<button class="card mix ${card.category}" type="button" id="${card.id}" data-id="${card.id}" aria-haspopup="dialog"><span class="art" aria-hidden="true" style="${art(card)}">${icon(card)}</span><span class="card-copy"><span class="card-title"></span><span class="subtitle"></span></span></button>`).join('')}</div></section>`;
+  }).join('');
 
-  function updateCount(count = mixer?.getState().totalShow ?? data.length) {
-    $('#empty-state').hidden = count !== 0;
+  function updateCount() {
+    $('#empty-state').hidden = data.length !== 0;
   }
   let filtering = false, appliedCategory = 'all';
   async function filterCards() {
@@ -175,14 +178,14 @@
     const t = text();
     document.documentElement.lang = language;
     document.title = `${t.title} · ${data.length} ${t.cards}`;
-    $('.filters').setAttribute('aria-label', t.filters); gallery.setAttribute('aria-label', t.gallery);
+    gallery.setAttribute('aria-label', t.gallery);
     $('#language-switch').setAttribute('aria-label', t.language);
     $('#modal-close').setAttribute('aria-label', t.close); $('#modal-prev').setAttribute('aria-label', t.prev); $('#modal-next').setAttribute('aria-label', t.next);
     $('#modal-thumbs-swiper').setAttribute('aria-label', t.choose);
     $('#empty-state').textContent = t.empty;
-    filters.forEach(button => { button.querySelector('.filter-label').textContent = t[button.dataset.category]; });
+    document.querySelectorAll('[data-category-label]').forEach(label => { label.textContent = t[label.dataset.categoryLabel]; });
     document.querySelectorAll('.language-option').forEach(button => { const active = button.dataset.language === language; button.classList.toggle('is-active', active); button.setAttribute('aria-pressed', String(active)); });
-    [...gallery.children].forEach(element => {
+    [...gallery.querySelectorAll('.card')].forEach(element => {
       const card = records.get(element.dataset.id);
       const draft = GRID_DRAFTS.getCard(card, language);
       element.querySelector('.card-title').textContent = draft.title;
@@ -196,13 +199,7 @@
   }
 
   applyLanguage(language, false);
-  if (!data.length || typeof mixitup !== 'function' || typeof Swiper !== 'function') { $('#empty-state').textContent = text().error; $('#empty-state').hidden = false; return; }
-  mixer = mixitup(gallery, { selectors: { target: '.card' }, controls: { enable: false }, animation: { duration: 680, easing: 'ease-in-out', effects: 'fade', nudge: false, queue: false, animateResizeContainer: false, animateResizeTargets: false, enable: !matchMedia('(prefers-reduced-motion: reduce)').matches }, callbacks: { onMixEnd: state => updateCount(state.totalShow) } });
-  filters.forEach(button => button.addEventListener('click', () => {
-    category = category === button.dataset.category ? 'all' : button.dataset.category;
-    filters.forEach(item => { const active = item.dataset.category === category; item.classList.toggle('is-active', active); item.setAttribute('aria-pressed', String(active)); });
-    filterCards();
-  }));
+  if (!data.length || typeof Swiper !== 'function') { $('#empty-state').textContent = text().error; $('#empty-state').hidden = false; return; }
   document.querySelectorAll('.language-option').forEach(button => button.addEventListener('click', () => applyLanguage(button.dataset.language)));
   gallery.addEventListener('click', event => { const card = event.target.closest('.card'); if (!card) return; history.pushState({ gridModal: true }, '', `#${card.dataset.id}`); syncRoute(); });
   $('#modal-thumbs').addEventListener('click', event => { const button = event.target.closest('[data-page]'); if (button) mainSwiper?.slideTo(Number(button.dataset.page)); });
@@ -216,10 +213,8 @@
     catalogEditing = !catalogEditing;
     $('#catalog-editor').hidden = !catalogEditing;
     gallery.hidden = catalogEditing;
-    $('.filters').hidden = catalogEditing;
     $('#toggle-catalog-editor').setAttribute('aria-expanded', String(catalogEditing));
     renderCatalogEditor();
-    if (!catalogEditing) mixer?.forceRefresh();
   });
   $('#catalog-editor-rows').addEventListener('input', event => {
     const row = event.target.closest('[data-card-id]'); if (!row) return;
